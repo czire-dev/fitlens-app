@@ -13,12 +13,14 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
-  GarmentView _view = GarmentView.front;
-  String? _selectedSize;
+  bool _showBack = false;
+  ProductVariant? _selectedVariant;
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    final backImage = product.backImageAsset;
+    final visibleBackImage = _showBack ? backImage : null;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -33,48 +35,61 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GarmentPreview(view: _view, artHeight: 264),
-                  const SizedBox(height: 8),
-                  Align(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (final view in GarmentView.values)
-                          ChoiceChip(
-                            label: Text(view.label),
-                            selected: _view == view,
-                            onSelected: (_) => setState(() => _view = view),
-                          ),
-                      ],
-                    ),
+                  GarmentPreview(
+                    assetPath: visibleBackImage ?? product.imageAsset,
+                    viewLabel: visibleBackImage == null ? 'Front' : 'Back',
+                    artHeight: 264,
                   ),
+                  if (backImage != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Front'),
+                            selected: !_showBack,
+                            onSelected: (_) =>
+                                setState(() => _showBack = false),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Back'),
+                            selected: _showBack,
+                            onSelected: (_) => setState(() => _showBack = true),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Text(product.name, style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 4),
-                  Text(product.priceLabel, style: theme.textTheme.titleMedium),
+                  Text(
+                    _selectedVariant?.priceLabel ?? product.catalogPriceLabel,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(product.description),
                   const SizedBox(height: 22),
                   Text('Size', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  if (product.availableSizes.isEmpty)
-                    const Text('No sizes available.')
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (final size in product.availableSizes)
-                          ChoiceChip(
-                            label: Text(size),
-                            selected: _selectedSize == size,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() => _selectedSize = size);
-                              }
-                            },
-                          ),
-                      ],
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final variant in product.variants)
+                        ChoiceChip(
+                          label: Text(variant.size),
+                          selected: _selectedVariant == variant,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() => _selectedVariant = variant);
+                            }
+                          },
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 18),
                   const _ComingLater(
                     icon: Icons.straighten_rounded,

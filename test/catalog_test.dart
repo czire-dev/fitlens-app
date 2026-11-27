@@ -9,18 +9,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late List<Product> bundledProducts;
+
+  setUpAll(() async {
+    bundledProducts = await loadProducts(rootBundle);
+  });
+
   testWidgets('Shopper can choose and switch shirt sizes', (tester) async {
     const shirt = 'SEVN Black Graphic Tee';
     final medium = find.widgetWithText(ChoiceChip, 'M');
     final large = find.widgetWithText(ChoiceChip, 'L');
     final back = find.widgetWithText(ChoiceChip, 'Back');
 
-    await tester.pumpWidget(const ProviderScope(child: MainApp()));
+    await tester.pumpWidget(_appWithProducts(bundledProducts));
     await tester.pumpAndSettle();
     expect(find.text(shirt), findsOneWidget);
-    expect(find.text('₱899'), findsOneWidget);
-    expect(find.text('Front placeholder'), findsOneWidget);
-    expect(find.text('Back placeholder'), findsOneWidget);
+    expect(find.text('₱899.00'), findsOneWidget);
+    expect(find.text('Back · Sample artwork'), findsOneWidget);
 
     await tester.tap(find.text('Explore tee'));
     await tester.pumpAndSettle();
@@ -33,8 +39,8 @@ void main() {
 
     await tester.tap(back);
     await tester.pumpAndSettle();
-    expect(find.text('Back placeholder'), findsOneWidget);
-    expect(find.text('Front placeholder'), findsNothing);
+    expect(find.text('Back · Sample artwork'), findsOneWidget);
+    expect(find.text('Front · Sample artwork'), findsNothing);
 
     await tester.ensureVisible(large);
     await tester.tap(large);
@@ -51,9 +57,88 @@ void main() {
     await tester.ensureVisible(find.text(shirt));
     await tester.tap(find.text(shirt));
     await tester.pumpAndSettle();
-    expect(find.text('Front placeholder'), findsOneWidget);
+    expect(find.text('Front · Sample artwork'), findsOneWidget);
     expect(tester.widget<ChoiceChip>(medium).selected, isFalse);
     expect(tester.widget<ChoiceChip>(large).selected, isFalse);
+  });
+
+  testWidgets('Shop keeps its scroll offset and opens the last product', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_appWithProducts(bundledProducts));
+    await tester.pumpAndSettle();
+
+    final nav = find.byType(NavigationBar);
+    final slate = find.text('SEVN Slate Signal Tee');
+    final lastCard = find.ancestor(of: slate, matching: find.byType(InkWell));
+    await tester.ensureVisible(lastCard);
+    final catalogPosition = tester.getTopLeft(slate);
+    expect(
+      tester.getBottomLeft(lastCard).dy,
+      lessThan(tester.getTopLeft(nav).dy),
+    );
+    expect(find.text('From ₱949.50').hitTestable(), findsOneWidget);
+
+    Finder tab(String label) =>
+        find.descendant(of: nav, matching: find.text(label));
+
+    final placeholders = {
+      'My fit': 'Your measurements and fit preferences will appear here.',
+      'Cart': 'The shirts and sizes you add will appear here.',
+      'Orders': 'You’ll be able to see your past orders here.',
+    };
+    for (final (index, entry) in placeholders.entries.indexed) {
+      await tester.tap(tab(entry.key));
+      await tester.pumpAndSettle();
+      expect(tester.widget<NavigationBar>(nav).selectedIndex, index + 1);
+      expect(find.text('Work in progress').hitTestable(), findsOneWidget);
+      expect(find.text(entry.value).hitTestable(), findsOneWidget);
+    }
+    await tester.tap(tab('Shop'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<NavigationBar>(nav).selectedIndex, 0);
+    expect(tester.getTopLeft(slate), catalogPosition);
+
+    await tester.tap(slate);
+    await tester.pumpAndSettle();
+    expect(nav, findsNothing);
+    expect(slate, findsOneWidget);
+    expect(
+      find.text(
+        'A slate-blue crewneck with a pale signal graphic across the chest.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      (tester.widget<Image>(find.byType(Image)).image as AssetImage).assetName,
+      'assets/products/slate-signal.png',
+    );
+    expect(find.widgetWithText(ChoiceChip, 'Back'), findsNothing);
+    expect(find.text('From ₱949.50'), findsOneWidget);
+    for (final size in ['M', 'L', 'XL']) {
+      final chip = find.widgetWithText(ChoiceChip, size);
+      expect(tester.widget<ChoiceChip>(chip).selected, isFalse);
+    }
+    expect(find.widgetWithText(ChoiceChip, 'S'), findsNothing);
+
+    final medium = find.widgetWithText(ChoiceChip, 'M');
+    final extraLarge = find.widgetWithText(ChoiceChip, 'XL');
+    await tester.tap(extraLarge);
+    await tester.pumpAndSettle();
+    expect(find.text('₱999.00'), findsOneWidget);
+    expect(find.text('From ₱949.50'), findsNothing);
+    await tester.tap(medium);
+    await tester.pumpAndSettle();
+    expect(find.text('₱949.50'), findsOneWidget);
+    expect(tester.widget<ChoiceChip>(extraLarge).selected, isFalse);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(slate), catalogPosition);
   });
 
   testWidgets('Both screens scroll on a small phone with large text', (
@@ -66,26 +151,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          catalogProvider.overrideWith(
-            (ref) async => const [
-              Product(
-                id: 'layout-sample',
-                name: 'SEVN Black Graphic Tee',
-                pricePhp: 899,
-                availableSizes: ['M', 'L'],
-              ),
-            ],
-          ),
-        ],
-        child: const MainApp(),
-      ),
-    );
+    await tester.pumpWidget(_appWithProducts(bundledProducts));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Back placeholder'));
-    expect(find.text('Back placeholder').hitTestable(), findsOneWidget);
+    final backArtwork = find.text('Back · Sample artwork');
+    await tester.ensureVisible(backArtwork);
+    expect(backArtwork.hitTestable(), findsOneWidget);
 
     final explore = find.text('Explore tee');
     await tester.ensureVisible(explore);
@@ -130,6 +200,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Could not load the catalog.'), findsOneWidget);
   });
+}
+
+Widget _appWithProducts(List<Product> products) {
+  return ProviderScope(
+    overrides: [catalogProvider.overrideWith((ref) async => products)],
+    child: const MainApp(),
+  );
 }
 
 Widget _appWithBundle(AssetBundle bundle) {

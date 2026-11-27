@@ -30,6 +30,24 @@ ThemeData buildFitLensTheme() {
     scaffoldBackgroundColor: _ivory,
     visualDensity: VisualDensity.standard,
     materialTapTargetSize: MaterialTapTargetSize.padded,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: _softWhite,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: _charcoal,
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected) ? _ivory : _warmGray,
+        ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => text.labelMedium?.copyWith(
+          color: _charcoal,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w800
+              : FontWeight.w500,
+        ),
+      ),
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: _ivory,
       foregroundColor: _charcoal,

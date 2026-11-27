@@ -11,21 +11,18 @@ class CatalogPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final catalog = ref.watch(catalogProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('FitLens')),
-      body: catalog.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(semanticsLabel: 'Loading catalog'),
-        ),
-        error: (error, stackTrace) =>
-            const _CatalogMessage('Could not load the catalog.'),
-        data: (products) => products.isEmpty
-            ? const _CatalogMessage('No products available.')
-            : _Storefront(products: products),
-      ),
-    );
+    return ref
+        .watch(catalogProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(semanticsLabel: 'Loading catalog'),
+          ),
+          error: (error, stackTrace) =>
+              const _CatalogMessage('Could not load the catalog.'),
+          data: (products) => products.isEmpty
+              ? const _CatalogMessage('No products available.')
+              : _Storefront(products: products),
+        );
   }
 }
 
@@ -189,24 +186,31 @@ class _ProductCard extends StatelessWidget {
             children: [
               Text(product.name, style: theme.textTheme.titleLarge),
               const SizedBox(height: 2),
-              Text(product.priceLabel, style: theme.textTheme.bodyMedium),
+              Text(
+                product.catalogPriceLabel,
+                style: theme.textTheme.bodyMedium,
+              ),
               const SizedBox(height: 12),
-              const Row(
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: GarmentPreview(
-                      view: GarmentView.front,
-                      artHeight: 96,
+                      assetPath: product.imageAsset,
+                      viewLabel: 'Front',
+                      artHeight: 120,
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: GarmentPreview(
-                      view: GarmentView.back,
-                      artHeight: 96,
+                  if (product.backImageAsset case final backImage?) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GarmentPreview(
+                        assetPath: backImage,
+                        viewLabel: 'Back',
+                        artHeight: 120,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],

@@ -2,7 +2,56 @@
   {
     "id": "sevn-black-graphic-tee",
     "name": "SEVN Black Graphic Tee",
-    "pricePhp": 899,
-    "availableSizes": ["M", "L"]
+    "description": "A black crewneck with a small SEVN chest mark and a bold back print.",
+    "imageAsset": "assets/products/black-graphic-front.png",
+    "backImageAsset": "assets/products/black-graphic-back.png",
+    "variants": [
+      {"size": "M", "priceCentavos": 89900},
+      {"size": "L", "priceCentavos": 89900}
+    ]
+  },
+  {
+    "id": "sevn-bone-grid-tee",
+    "name": "SEVN Bone Grid Tee",
+    "description": "A bone-colored crewneck with an ink-black checker print across the chest.",
+    "imageAsset": "assets/products/bone-grid.png",
+    "variants": [
+      {"size": "XS", "priceCentavos": 79900},
+      {"size": "S", "priceCentavos": 79900},
+      {"size": "M", "priceCentavos": 79900}
+    ]
+  },
+  {
+    "id": "sevn-forest-contour-tee",
+    "name": "SEVN Forest Contour Tee",
+    "description": "A forest-green tee with contour lines in muted gold.",
+    "imageAsset": "assets/products/forest-contour.png",
+    "variants": [
+      {"size": "S", "priceCentavos": 84900},
+      {"size": "M", "priceCentavos": 84900},
+      {"size": "L", "priceCentavos": 84900},
+      {"size": "XL", "priceCentavos": 84900}
+    ]
+  },
+  {
+    "id": "sevn-oxblood-orbit-tee",
+    "name": "SEVN Oxblood Orbit Tee",
+    "description": "An oxblood crewneck with a layered orbit graphic in warm ivory.",
+    "imageAsset": "assets/products/oxblood-orbit.png",
+    "variants": [
+      {"size": "L", "priceCentavos": 87900},
+      {"size": "XL", "priceCentavos": 87900}
+    ]
+  },
+  {
+    "id": "sevn-slate-signal-tee",
+    "name": "SEVN Slate Signal Tee",
+    "description": "A slate-blue crewneck with a pale signal graphic across the chest.",
+    "imageAsset": "assets/products/slate-signal.png",
+    "variants": [
+      {"size": "M", "priceCentavos": 94950},
+      {"size": "L", "priceCentavos": 96900},
+      {"size": "XL", "priceCentavos": 99900}
+    ]
   }
 ]
