@@ -2,20 +2,20 @@
 
 ## What works today
 
-FitLens opens on the ivory **Shop** tab with a charcoal collection banner and five offline sample shirts. **Explore tee** opens the featured SEVN Black Graphic Tee, which has front and back artwork. The other shirts show their front artwork. Each card opens its own description, sizes, and price. The **My fit**, **Cart**, and **Orders** tabs show work-in-progress pages.
+FitLens opens on the ivory **Shop** tab with five offline sample shirts. A product page has a shared **SEVN size chart** before the size choices. The chart uses centimeters, and chest width and body length are marked **Pending** until documented measurements are available. Unavailable sizes are disabled. Pick an available size to enable **Add to cart**. **My fit** and **Orders** are work-in-progress pages.
 
-## How prices and navigation work
+## How a size becomes a cart line
 
-A size in the bundled JSON has an integer `priceCentavos`. For example, `94950` becomes `₱949.50` when `ProductVariant.priceLabel` divides it into whole pesos and centavos for display. Shop shows one price if all sizes cost the same and **From** followed by the lowest price when they differ. Picking a size on the detail page replaces that label with the exact price for the chosen size. The detail page owns the selection and clears it when you leave. [products.json](assets/data/products.json) · [product.dart](lib/features/catalog/product.dart) · [product_detail_page.dart](lib/features/catalog/product_detail_page.dart)
+A size in the bundled JSON has an integer `priceCentavos`. The detail page keeps the chosen size local and sends the product ID and size to the Riverpod cart controller. The controller checks the pair against the loaded catalog and uses that variant's price. Adding the same pair increases its quantity. Other product and size pairs get separate lines. [products.json](assets/data/products.json) · [Product details](lib/features/catalog/product_detail_page.dart) · [Cart controller](lib/features/cart/cart_controller.dart)
 
-Riverpod loads the catalog and exposes loading, data, and error states. `AppShell` owns the selected tab and uses an `IndexedStack` to keep Shop mounted, so its scroll position survives tab changes. Details open above the shell. [catalog_provider.dart](lib/features/catalog/catalog_provider.dart) · [app_shell.dart](lib/app_shell.dart)
+The cart multiplies unit price by quantity and sums the line totals, all in centavos. The Cart tab shows product thumbnails, a count based on total quantity, and a subtotal pinned above the navigation bar. Rows show the unit price when quantity exceeds one. Minus stops at one, and **Remove** deletes a line. The illustrated empty state offers **Browse shirts** to return to Shop. The cart survives tab changes and resets when the app restarts. [Cart screen](lib/features/cart/cart_page.dart) · [App shell](lib/app_shell.dart)
 
 ## Run and verify
 
 From the repo root, run `flutter run -d chrome`. On a connected Android device, get its ID from `flutter devices` and run `flutter run -d <android-device-id>`.
 
-Dart formatting, Flutter analysis, and all 11 tests passed. I checked the storefront, the last card, its detail page, and the Cart placeholder in Chrome at 390 × 844. Native targets were untested. [Catalog tests](test/catalog_test.dart) · [Product and asset tests](test/product_test.dart)
+Dart formatting, Flutter analysis, and all 14 tests passed. Chrome at 390 × 844 showed the chart, selection gate, add feedback, quantity changes, and empty cart. Native targets were untested. [Widget tests](test/catalog_test.dart) · [Cart controller tests](test/cart_controller_test.dart)
 
 ## Review the changes
 
-Scroll to **SEVN Slate Signal Tee**, switch to **Cart**, and return to **Shop**. Open the tee, tap **XL**, and check that the price changes from **From ₱949.50** to **₱999.00**. Tap Back to return to the same spot. [Changelog](docs/CHANGELOG.md) · [Agent workflow](docs/AGENT.md)
+Open the black graphic tee, view the chart, and add **M** twice. Back out to **Cart** and check the ₱1,798.00 subtotal. Decrease to one, remove the line, and tap **Browse shirts**. [Changelog](docs/CHANGELOG.md) · [Agent workflow](docs/AGENT.md)

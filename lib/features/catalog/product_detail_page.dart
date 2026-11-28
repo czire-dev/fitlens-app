@@ -1,24 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/garment_preview.dart';
+import '../cart/cart_controller.dart';
 import 'product.dart';
+import 'size_chart.dart';
 
-class ProductDetailPage extends StatefulWidget {
+class ProductDetailPage extends ConsumerStatefulWidget {
   const ProductDetailPage({super.key, required this.product});
 
   final Product product;
 
   @override
-  State<ProductDetailPage> createState() => _ProductDetailPageState();
+  ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
 }
 
-class _ProductDetailPageState extends State<ProductDetailPage> {
+class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _showBack = false;
-  ProductVariant? _selectedVariant;
+  String? _selectedSize;
+
+  void _addToCart(ProductVariant variant) {
+    final added = ref
+        .read(cartProvider.notifier)
+        .add(widget.product.id, variant.size);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            added
+                ? 'Size ${variant.size} added to cart.'
+                : 'This size is unavailable.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    final selected = product.variantForSize(_selectedSize ?? '');
+    final sizes = {
+      ...sevnChartSizes,
+      ...product.variants.map((variant) => variant.size),
+    };
     final backImage = product.backImageAsset;
     final visibleBackImage = _showBack ? backImage : null;
     final theme = Theme.of(context);
@@ -66,29 +92,45 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   Text(product.name, style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 4),
                   Text(
-                    _selectedVariant?.priceLabel ?? product.catalogPriceLabel,
+                    selected?.priceLabel ?? product.catalogPriceLabel,
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(product.description),
                   const SizedBox(height: 22),
                   Text('Size', style: theme.textTheme.titleMedium),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton(
+                      onPressed: () => showSevnSizeChart(context),
+                      child: const Text('SEVN size chart'),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      for (final variant in product.variants)
+                      for (final size in sizes)
                         ChoiceChip(
-                          label: Text(variant.size),
-                          selected: _selectedVariant == variant,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() => _selectedVariant = variant);
-                            }
-                          },
+                          label: Text(size),
+                          selected: selected?.size == size,
+                          onSelected: product.variantForSize(size) == null
+                              ? null
+                              : (checked) {
+                                  if (checked) {
+                                    setState(() => _selectedSize = size);
+                                  }
+                                },
                         ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: selected == null
+                        ? null
+                        : () => _addToCart(selected),
+                    child: const Text('Add to cart'),
                   ),
                   const SizedBox(height: 18),
                   const _ComingLater(

@@ -4,12 +4,12 @@ class GarmentPreview extends StatelessWidget {
   const GarmentPreview({
     super.key,
     required this.assetPath,
-    required this.viewLabel,
+    this.viewLabel,
     required this.artHeight,
   });
 
   final String assetPath;
-  final String viewLabel;
+  final String? viewLabel;
   final double artHeight;
 
   @override
@@ -44,14 +44,16 @@ class GarmentPreview extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '$viewLabel · Sample artwork',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
+            if (viewLabel case final label?) ...[
+              const SizedBox(height: 6),
+              Text(
+                '$label · Sample artwork',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

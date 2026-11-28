@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../../core/format_price.dart';
+
 class Product {
   const Product({
     required this.id,
@@ -18,6 +20,9 @@ class Product {
   final String imageAsset;
   final String? backImageAsset;
   final List<ProductVariant> variants;
+
+  ProductVariant? variantForSize(String size) =>
+      variants.where((variant) => variant.size == size).firstOrNull;
 
   String get catalogPriceLabel {
     final lowest = variants.reduce(
@@ -75,11 +80,7 @@ class ProductVariant {
   final String size;
   final int priceCentavos;
 
-  String get priceLabel {
-    final pesos = priceCentavos ~/ 100;
-    final centavos = (priceCentavos % 100).toString().padLeft(2, '0');
-    return '₱$pesos.$centavos';
-  }
+  String get priceLabel => formatPesos(priceCentavos);
 
   factory ProductVariant.fromJson(Object? json) {
     if (json case {

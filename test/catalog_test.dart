@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:fitlens/features/cart/cart_controller.dart';
+import 'package:fitlens/features/cart/cart_page.dart';
 import 'package:fitlens/features/catalog/catalog_provider.dart';
 import 'package:fitlens/features/catalog/product.dart';
 import 'package:fitlens/main.dart';
@@ -37,6 +39,15 @@ void main() {
     expect(tester.widget<ChoiceChip>(medium).selected, isFalse);
     expect(tester.widget<ChoiceChip>(large).selected, isFalse);
 
+    final add = find.widgetWithText(FilledButton, 'Add to cart');
+    expect(tester.widget<FilledButton>(add).onPressed, isNull);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'XS'))
+          .onSelected,
+      isNull,
+    );
+
     await tester.tap(back);
     await tester.pumpAndSettle();
     expect(find.text('Back · Sample artwork'), findsOneWidget);
@@ -51,15 +62,126 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<ChoiceChip>(medium).selected, isTrue);
     expect(tester.widget<ChoiceChip>(large).selected, isFalse);
+    await tester.ensureVisible(add);
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(find.text('Size M added to cart.'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Cart'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Size M').hitTestable(), findsOneWidget);
+    expect(find.text('1 item').hitTestable(), findsOneWidget);
+    expect(find.text('₱899.00 each').hitTestable(), findsNothing);
+    final cartPage = find.byType(CartPage);
+    Finder cartText(String text) =>
+        find.descendant(of: cartPage, matching: find.text(text));
+    expect(cartText('Subtotal'), findsOneWidget);
+    expect(cartText('₱899.00'), findsNWidgets(2));
+    final minus = find.byTooltip(
+      'Decrease quantity for SEVN Black Graphic Tee, size M',
+    );
+    final minusButton = find.byWidgetPredicate(
+      (widget) =>
+          widget is IconButton &&
+          widget.tooltip ==
+              'Decrease quantity for SEVN Black Graphic Tee, size M',
+    );
+    expect(tester.widget<IconButton>(minusButton).onPressed, isNull);
+    await tester.tap(
+      find.byTooltip('Increase quantity for SEVN Black Graphic Tee, size M'),
+    );
+    await tester.pumpAndSettle();
+    expect(cartText('₱1,798.00'), findsNWidgets(2));
+    expect(find.text('₱899.00 each').hitTestable(), findsOneWidget);
+    await tester.tap(minus);
+    await tester.pumpAndSettle();
+    expect(cartText('₱899.00'), findsNWidgets(2));
+    await tester.tap(find.text('Remove').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('Your cart is empty').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Browse shirts').hitTestable());
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
+
     await tester.ensureVisible(find.text(shirt));
     await tester.tap(find.text(shirt));
     await tester.pumpAndSettle();
     expect(find.text('Front · Sample artwork'), findsOneWidget);
     expect(tester.widget<ChoiceChip>(medium).selected, isFalse);
     expect(tester.widget<ChoiceChip>(large).selected, isFalse);
+  });
+
+  testWidgets('Cart fits a short phone with large text and pins its subtotal', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    const longName = 'SEVN Extended Collection Black Graphic Streetwear Tee';
+    final original = bundledProducts.first;
+    await tester.pumpWidget(
+      _appWithProducts([
+        Product(
+          id: original.id,
+          name: longName,
+          description: original.description,
+          imageAsset: original.imageAsset,
+          variants: original.variants,
+        ),
+      ]),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MainApp)),
+    );
+    final cart = container.read(cartProvider.notifier);
+    final nav = find.byType(NavigationBar);
+    await tester.tap(find.descendant(of: nav, matching: find.text('Cart')));
+    await tester.pumpAndSettle();
+    expect(find.text('Your cart is empty').hitTestable(), findsOneWidget);
+    await tester.ensureVisible(find.text('Browse shirts'));
+    expect(find.text('Browse shirts').hitTestable(), findsOneWidget);
+
+    cart.add(original.id, 'M');
+    cart.add(original.id, 'M');
+    cart.add(original.id, 'L');
+    await tester.pumpAndSettle();
+    expect(find.text('3 items').hitTestable(), findsOneWidget);
+    final subtotal = find.text('Subtotal').hitTestable();
+    expect(subtotal, findsOneWidget);
+    final position = tester.getTopLeft(subtotal);
+    final list = find.descendant(
+      of: find.byType(CartPage),
+      matching: find.byType(Scrollable),
+    );
+    final lastSize = find.text('Size L');
+    await tester.scrollUntilVisible(lastSize, 120, scrollable: list);
+    await tester.pumpAndSettle();
+    expect(lastSize.hitTestable(), findsOneWidget);
+    expect(tester.getTopLeft(subtotal), position);
+    final lastRemove = find.descendant(
+      of: find.ancestor(of: lastSize, matching: find.byType(Card)),
+      matching: find.text('Remove'),
+    );
+    await tester.scrollUntilVisible(lastRemove, 100, scrollable: list);
+    await tester.pumpAndSettle();
+    expect(lastRemove.hitTestable(), findsOneWidget);
+    expect(tester.getTopLeft(subtotal), position);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Shop keeps its scroll offset and opens the last product', (
@@ -88,14 +210,16 @@ void main() {
 
     final placeholders = {
       'My fit': 'Your measurements and fit preferences will appear here.',
-      'Cart': 'The shirts and sizes you add will appear here.',
+      'Cart': 'Your cart is empty',
       'Orders': 'You’ll be able to see your past orders here.',
     };
     for (final (index, entry) in placeholders.entries.indexed) {
       await tester.tap(tab(entry.key));
       await tester.pumpAndSettle();
       expect(tester.widget<NavigationBar>(nav).selectedIndex, index + 1);
-      expect(find.text('Work in progress').hitTestable(), findsOneWidget);
+      if (entry.key != 'Cart') {
+        expect(find.text('Work in progress').hitTestable(), findsOneWidget);
+      }
       expect(find.text(entry.value).hitTestable(), findsOneWidget);
     }
     await tester.tap(tab('Shop'));
@@ -123,7 +247,12 @@ void main() {
       final chip = find.widgetWithText(ChoiceChip, size);
       expect(tester.widget<ChoiceChip>(chip).selected, isFalse);
     }
-    expect(find.widgetWithText(ChoiceChip, 'S'), findsNothing);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'S'))
+          .onSelected,
+      isNull,
+    );
 
     final medium = find.widgetWithText(ChoiceChip, 'M');
     final extraLarge = find.widgetWithText(ChoiceChip, 'XL');

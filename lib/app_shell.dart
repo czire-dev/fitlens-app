@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'features/cart/cart_page.dart';
 import 'features/catalog/catalog_page.dart';
 
 enum _Destination {
@@ -10,12 +11,7 @@ enum _Destination {
     Icons.straighten,
     'Your measurements and fit preferences will appear here.',
   ),
-  cart(
-    'Cart',
-    Icons.shopping_bag_outlined,
-    Icons.shopping_bag,
-    'The shirts and sizes you add will appear here.',
-  ),
+  cart('Cart', Icons.shopping_bag_outlined, Icons.shopping_bag),
   orders(
     'Orders',
     Icons.receipt_long_outlined,
@@ -50,9 +46,11 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _selected == _Destination.shop ? 'FitLens' : _selected.label,
-        ),
+        title: switch (_selected) {
+          _Destination.shop => const Text('FitLens'),
+          _Destination.cart => const CartHeading(),
+          _ => Text(_selected.label),
+        },
       ),
       body: IndexedStack(
         index: _selected.index,
@@ -60,12 +58,15 @@ class _AppShellState extends State<AppShell> {
           for (final destination in _Destination.values)
             ExcludeFocus(
               excluding: destination != _selected,
-              child: switch (destination.description) {
-                final String description => _PlaceholderPage(
-                  icon: destination.icon,
-                  description: description,
+              child: switch (destination) {
+                _Destination.shop => const CatalogPage(),
+                _Destination.cart => CartPage(
+                  onBrowse: () => setState(() => _selected = _Destination.shop),
                 ),
-                null => const CatalogPage(),
+                _ => _PlaceholderPage(
+                  icon: destination.icon,
+                  description: destination.description!,
+                ),
               },
             ),
         ],

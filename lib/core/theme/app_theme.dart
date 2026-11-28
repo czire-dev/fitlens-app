@@ -86,14 +86,18 @@ ThemeData buildFitLensTheme() {
     ),
     chipTheme: ChipThemeData(
       color: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
+        (states) => states.contains(WidgetState.disabled)
+            ? colors.surfaceContainerHigh
+            : states.contains(WidgetState.selected)
             ? selectedChipFill
             : _softWhite,
       ),
       labelStyle: TextStyle(
         fontWeight: FontWeight.w700,
         color: WidgetStateColor.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? _warmGray
+              : states.contains(WidgetState.selected)
               ? selectedChipInk
               : _charcoal,
         ),
@@ -104,7 +108,9 @@ ThemeData buildFitLensTheme() {
       padding: const EdgeInsets.all(8),
       side: WidgetStateBorderSide.resolveWith(
         (states) => BorderSide(
-          color: states.contains(WidgetState.selected)
+          color: states.contains(WidgetState.disabled)
+              ? colors.outlineVariant
+              : states.contains(WidgetState.selected)
               ? selectedChipFill
               : colors.outline,
         ),
