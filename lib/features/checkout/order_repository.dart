@@ -22,6 +22,28 @@ class OrderRepository {
   Future<SavedOrder?> find(String reference) async =>
       _find(await _open(), reference);
 
+  Future<List<OrderSummary>> listOrders() async {
+    final db = await _open();
+    final rows = await db.query(
+      'orders',
+      columns: ['reference', 'created_at', 'total_centavos'],
+    );
+    // Compare parsed timestamps so optional fractional digits sort correctly.
+    return rows
+        .map(
+          (row) => (
+            reference: row['reference'] as String,
+            createdAt: DateTime.parse(row['created_at'] as String),
+            totalCentavos: row['total_centavos'] as int,
+          ),
+        )
+        .toList()
+      ..sort((a, b) {
+        final byDate = b.createdAt.compareTo(a.createdAt);
+        return byDate == 0 ? a.reference.compareTo(b.reference) : byDate;
+      });
+  }
+
   Future<SavedOrder> save(
     CheckoutReview review, {
     required bool Function() reviewIsCurrent,

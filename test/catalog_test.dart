@@ -5,6 +5,7 @@ import 'package:fitlens/features/cart/cart_page.dart';
 import 'package:fitlens/features/catalog/catalog_provider.dart';
 import 'package:fitlens/features/catalog/product.dart';
 import 'package:fitlens/main.dart';
+import 'package:fitlens/features/orders/order_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -155,7 +156,12 @@ void main() {
     await tester.tap(find.descendant(of: nav, matching: find.text('Cart')));
     await tester.pumpAndSettle();
     expect(find.text('Your cart is empty').hitTestable(), findsOneWidget);
-    await tester.ensureVisible(find.text('Browse shirts'));
+    await tester.ensureVisible(
+      find.descendant(
+        of: find.byType(CartPage),
+        matching: find.text('Browse shirts'),
+      ),
+    );
     expect(find.text('Browse shirts').hitTestable(), findsOneWidget);
 
     cart.add(original.id, 'M');
@@ -213,13 +219,13 @@ void main() {
     final placeholders = {
       'My fit': 'Your measurements and fit preferences will appear here.',
       'Cart': 'Your cart is empty',
-      'Orders': 'You’ll be able to see your past orders here.',
+      'Orders': 'No orders yet',
     };
     for (final (index, entry) in placeholders.entries.indexed) {
       await tester.tap(tab(entry.key));
       await tester.pumpAndSettle();
       expect(tester.widget<NavigationBar>(nav).selectedIndex, index + 1);
-      if (entry.key != 'Cart') {
+      if (entry.key == 'My fit') {
         expect(find.text('Work in progress').hitTestable(), findsOneWidget);
       }
       expect(find.text(entry.value).hitTestable(), findsOneWidget);
@@ -444,6 +450,7 @@ Widget _appWithProducts(
 ]) {
   return ProviderScope(
     overrides: [
+      orderHistoryProvider.overrideWith((ref) async => []),
       catalogProvider.overrideWith((ref) async => products),
       cartRepositoryProvider.overrideWithValue(
         repository ?? TestCartRepository(),

@@ -240,13 +240,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await _tap(
-      tester,
-      find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Cart'),
-      ),
+    Finder tab(String label) => find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.text(label),
     );
+    await _tap(tester, tab('Orders'));
+    expect(find.text('No orders yet').hitTestable(), findsOneWidget);
+    await _tap(tester, find.text('Browse shirts').hitTestable());
+    expect(find.text('Explore tee').hitTestable(), findsOneWidget);
+    await _tap(tester, tab('Cart'));
 
     Future<void> submit() async {
       await _tap(tester, find.text('Checkout'));
@@ -281,6 +283,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Your cart is empty'), findsOneWidget);
     expect(find.text('Review order'), findsNothing);
+    await _tap(tester, tab('Orders'));
+    expect(find.text('No orders yet'), findsNothing);
+    expect(find.text(orders.latestReference!).hitTestable(), findsOneWidget);
+    await _tap(tester, tab('Cart'));
     final container = ProviderScope.containerOf(
       tester.element(find.byType(MainApp)),
     );
@@ -313,6 +319,17 @@ class _ConfirmationRepository extends OrderRepository {
 
   final TestCartRepository cart;
   String? latestReference;
+  final _saved = <SavedOrder>[];
+
+  @override
+  Future<List<OrderSummary>> listOrders() async => [
+    for (final order in _saved.reversed)
+      (
+        reference: order.reference,
+        createdAt: order.createdAt,
+        totalCentavos: order.totalCentavos,
+      ),
+  ];
 
   @override
   Future<SavedOrder> save(
@@ -324,7 +341,7 @@ class _ConfirmationRepository extends OrderRepository {
     for (final item in review.items) {
       await cart.remove((productId: item.productId, size: item.size));
     }
-    return SavedOrder(
+    final saved = SavedOrder(
       reference: review.reference,
       createdAt: DateTime.utc(2026),
       delivery: review.delivery,
@@ -333,6 +350,8 @@ class _ConfirmationRepository extends OrderRepository {
       totalCentavos: review.totalCentavos,
       items: review.items.toList(),
     );
+    _saved.add(saved);
+    return saved;
   }
 }
 

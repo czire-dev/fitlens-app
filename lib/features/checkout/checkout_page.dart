@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format_price.dart';
 import '../../shared/widgets/garment_preview.dart';
+import '../../shared/widgets/order_amount_row.dart';
 import '../cart/cart_controller.dart';
 import '../catalog/catalog_provider.dart';
+import '../orders/order_providers.dart';
 import 'checkout_models.dart';
 import 'delivery_form.dart';
 import 'order_repository.dart';
@@ -120,6 +122,7 @@ class _ReviewPageState extends ConsumerState<_ReviewPage> {
       );
       if (!mounted) return;
       ref.invalidate(cartProvider);
+      ref.invalidate(orderHistoryProvider);
       ref.read(_deliveryDraft.notifier).clear();
       Navigator.of(context).pop(saved);
     } on CheckoutChanged {
@@ -213,12 +216,15 @@ class _ReviewPageState extends ConsumerState<_ReviewPage> {
               ),
             ),
             const Divider(height: 32),
-            _AmountRow(label: 'Subtotal', centavos: _review.subtotalCentavos),
-            _AmountRow(
+            OrderAmountRow(
+              label: 'Subtotal',
+              centavos: _review.subtotalCentavos,
+            ),
+            OrderAmountRow(
               label: 'Delivery',
               centavos: CheckoutReview.deliveryCentavos,
             ),
-            _AmountRow(
+            OrderAmountRow(
               label: 'Total',
               centavos: _review.totalCentavos,
               emphasized: true,
@@ -336,42 +342,6 @@ class _ReviewedItem extends StatelessWidget {
   }
 }
 
-class _AmountRow extends StatelessWidget {
-  const _AmountRow({
-    required this.label,
-    required this.centavos,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final int centavos;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = emphasized
-        ? theme.textTheme.titleLarge
-        : theme.textTheme.bodyMedium;
-    return Padding(
-      padding: EdgeInsets.only(top: emphasized ? 10 : 4),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: style)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              formatPesos(centavos),
-              style: style,
-              textAlign: TextAlign.end,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ConfirmationPage extends StatefulWidget {
   const _ConfirmationPage({
     required this.order,
@@ -450,7 +420,7 @@ class _ConfirmationPageState extends State<_ConfirmationPage> {
                     Semantics(liveRegion: true, child: Text(feedback)),
                   ],
                   const Divider(height: 24),
-                  _AmountRow(
+                  OrderAmountRow(
                     label: 'Total',
                     centavos: order.totalCentavos,
                     emphasized: true,

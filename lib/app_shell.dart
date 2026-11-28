@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'features/cart/cart_page.dart';
 import 'features/catalog/catalog_page.dart';
+import 'features/orders/orders_page.dart';
 
 enum _Destination {
   shop('Shop', Icons.storefront_outlined, Icons.storefront),
@@ -12,12 +13,7 @@ enum _Destination {
     'Your measurements and fit preferences will appear here.',
   ),
   cart('Cart', Icons.shopping_bag_outlined, Icons.shopping_bag),
-  orders(
-    'Orders',
-    Icons.receipt_long_outlined,
-    Icons.receipt_long,
-    'You’ll be able to see your past orders here.',
-  );
+  orders('Orders', Icons.receipt_long_outlined, Icons.receipt_long);
 
   const _Destination(
     this.label,
@@ -63,7 +59,10 @@ class _AppShellState extends State<AppShell> {
                 _Destination.cart => CartPage(
                   onBrowse: () => setState(() => _selected = _Destination.shop),
                 ),
-                _ => _PlaceholderPage(
+                _Destination.orders => OrdersPage(
+                  onBrowse: () => setState(() => _selected = _Destination.shop),
+                ),
+                _Destination.myFit => _PlaceholderPage(
                   icon: destination.icon,
                   description: destination.description!,
                 ),

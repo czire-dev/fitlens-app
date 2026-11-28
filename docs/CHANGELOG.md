@@ -29,3 +29,7 @@ Added guest delivery details and review so shoppers can verify their cart before
 ## 2026-11-28 — Polish checkout screens
 
 Grouped delivery fields and added offline city suggestions so shoppers can enter addresses faster. Review now shows product artwork and a clearer price breakdown. The receipt offers a copyable reference and a direct return to Shop. Formatting, analysis, and all 26 tests passed. Chrome showed the Caloocan suggestion, a wrapped address, and matching review and receipt totals. Saved-profile autofill and native apps were untested.
+
+## 2026-11-28 — Add local order history
+
+Added a newest-first Orders list and read-only receipts from saved checkout snapshots, so later catalog changes do not alter past orders. Formatting, analysis, and all 28 tests passed, including SQLite reopen, timestamp ordering, empty history, refresh after checkout, and a fixture price-change check. Chrome was used to inspect a saved receipt; a clean first-launch visual check was unavailable, and native apps were untested.

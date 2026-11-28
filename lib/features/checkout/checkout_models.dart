@@ -129,3 +129,9 @@ class SavedOrder {
   final int totalCentavos;
   final List<OrderItem> items;
 }
+
+typedef OrderSummary = ({
+  String reference,
+  DateTime createdAt,
+  int totalCentavos,
+});
