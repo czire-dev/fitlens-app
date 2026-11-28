@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format_price.dart';
 import '../../shared/widgets/garment_preview.dart';
 import 'cart_controller.dart';
+import 'cart_issue.dart';
 
 class CartHeading extends ConsumerWidget {
   const CartHeading({super.key});
@@ -11,10 +12,7 @@ class CartHeading extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(
-      cartProvider.select(
-        (cart) =>
-            cart.lines.values.fold(0, (count, line) => count + line.quantity),
-      ),
+      cartProvider.select((cart) => cart.asData?.value.itemCount ?? 0),
     );
     final theme = Theme.of(context);
 
@@ -40,37 +38,98 @@ class CartPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
-    if (cart.lines.isEmpty) return _EmptyCart(onBrowse: onBrowse);
-
+    final cartState = ref.watch(cartProvider);
     final controller = ref.read(cartProvider.notifier);
+    if (cartState.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(semanticsLabel: 'Loading cart'),
+      );
+    }
+    final cart = cartState.asData?.value;
+    final issue = CartIssue(cart: cartState, controller: controller);
+    if (cart == null) return Center(child: SingleChildScrollView(child: issue));
+
     return Column(
       children: [
+        issue,
         Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: ListView(
-                primary: false,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                children: [
-                  for (final entry in cart.lines.entries)
-                    _CartLineCard(
-                      key: ValueKey(entry.key),
-                      line: entry.value,
-                      onQuantity: (quantity) =>
-                          controller.setQuantity(entry.key, quantity),
-                      onRemove: () => controller.remove(entry.key),
+          child: cart.lines.isEmpty
+              ? _EmptyCart(onBrowse: onBrowse)
+              : Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: ListView(
+                      primary: false,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      children: [
+                        for (final entry in cart.lines.entries)
+                          if (entry.value.variant == null)
+                            _UnavailableLine(
+                              key: ValueKey(entry.key),
+                              name:
+                                  entry.value.product?.name ??
+                                  entry.key.productId,
+                              size: entry.key.size,
+                              quantity: entry.value.quantity,
+                              onRemove: cart.writeFailed
+                                  ? null
+                                  : () => controller.remove(entry.key),
+                            )
+                          else
+                            _CartLineCard(
+                              key: ValueKey(entry.key),
+                              line: entry.value,
+                              onQuantity: cart.writeFailed
+                                  ? null
+                                  : (delta) => controller.adjustQuantity(
+                                      entry.key,
+                                      delta,
+                                    ),
+                              onRemove: cart.writeFailed
+                                  ? null
+                                  : () => controller.remove(entry.key),
+                            ),
+                      ],
                     ),
-                ],
-              ),
-            ),
-          ),
+                  ),
+                ),
         ),
-        _SubtotalStrip(subtotalCentavos: cart.subtotalCentavos),
+        if (cart.lines.isNotEmpty)
+          _SubtotalStrip(subtotalCentavos: cart.subtotalCentavos),
       ],
     );
   }
+}
+
+class _UnavailableLine extends StatelessWidget {
+  const _UnavailableLine({
+    super.key,
+    required this.name,
+    required this.size,
+    required this.quantity,
+    required this.onRemove,
+  });
+
+  final String name;
+  final String size;
+  final int quantity;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(name, style: Theme.of(context).textTheme.titleMedium),
+          Text('Size $size · Quantity $quantity'),
+          const Text('No longer available'),
+          TextButton(onPressed: onRemove, child: const Text('Remove')),
+        ],
+      ),
+    ),
+  );
 }
 
 class _EmptyCart extends StatelessWidget {
@@ -170,14 +229,16 @@ class _CartLineCard extends StatelessWidget {
   });
 
   final CartLine line;
-  final ValueChanged<int> onQuantity;
-  final VoidCallback onRemove;
+  final ValueChanged<int>? onQuantity;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final label = '${line.product.name}, size ${line.variant.size}';
+    final product = line.product!;
+    final variant = line.variant!;
+    final label = '${product.name}, size ${variant.size}';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -198,7 +259,7 @@ class _CartLineCard extends StatelessWidget {
                 SizedBox(
                   width: 88,
                   child: GarmentPreview(
-                    assetPath: line.product.imageAsset,
+                    assetPath: product.imageAsset,
                     artHeight: 64,
                   ),
                 ),
@@ -207,14 +268,10 @@ class _CartLineCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        line.product.name,
-                        style: theme.textTheme.titleMedium,
-                      ),
+                      Text(product.name, style: theme.textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text('Size ${line.variant.size}'),
-                      if (line.quantity > 1)
-                        Text('${line.variant.priceLabel} each'),
+                      Text('Size ${variant.size}'),
+                      if (line.quantity > 1) Text('${variant.priceLabel} each'),
                       const SizedBox(height: 4),
                       Text(
                         formatPesos(line.totalCentavos),
@@ -241,9 +298,9 @@ class _CartLineCard extends StatelessWidget {
                     children: [
                       IconButton(
                         tooltip: 'Decrease quantity for $label',
-                        onPressed: line.quantity == 1
+                        onPressed: line.quantity == 1 || onQuantity == null
                             ? null
-                            : () => onQuantity(line.quantity - 1),
+                            : () => onQuantity!(-1),
                         icon: const Icon(Icons.remove, size: 18),
                       ),
                       ConstrainedBox(
@@ -256,7 +313,9 @@ class _CartLineCard extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Increase quantity for $label',
-                        onPressed: () => onQuantity(line.quantity + 1),
+                        onPressed: onQuantity == null
+                            ? null
+                            : () => onQuantity!(1),
                         icon: const Icon(Icons.add, size: 18),
                       ),
                     ],

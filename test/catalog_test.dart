@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/test_cart_repository.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late List<Product> bundledProducts;
@@ -302,10 +304,102 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('A failed add preserves totals and Retry adds one unit', (
+    tester,
+  ) async {
+    final product = bundledProducts.first;
+    final repository = TestCartRepository({
+      (productId: product.id, size: 'M'): 1,
+    })..failNextWrite = true;
+    await tester.pumpWidget(_appWithProducts(bundledProducts, repository));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore tee'));
+    await tester.pumpAndSettle();
+    final size = find.widgetWithText(ChoiceChip, 'M');
+    await tester.ensureVisible(size);
+    await tester.tap(size);
+    final add = find.text('Add to cart');
+    await tester.ensureVisible(add);
+    await tester.pumpAndSettle();
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(find.text('Could not save the cart change.'), findsOneWidget);
+    expect(find.text('Size M added to cart.'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await _openCart(tester);
+    expect(find.text('1 item'), findsOneWidget);
+    expect(find.text('₱899.00').hitTestable(), findsWidgets);
+
+    await tester.tap(find.text('Retry').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('2 items'), findsOneWidget);
+    expect(find.text('₱1,798.00'), findsNWidgets(2));
+    expect(find.text('Could not save the cart change.'), findsNothing);
+  });
+
+  testWidgets(
+    'Saved rows survive a read retry and unavailable sizes stay removable',
+    (tester) async {
+      final product = bundledProducts.first;
+      final missing = (productId: product.id, size: 'XS');
+      final repository = TestCartRepository({
+        (productId: product.id, size: 'M'): 2,
+        missing: 3,
+      })..failNextRead = true;
+      await tester.pumpWidget(_appWithProducts(bundledProducts, repository));
+      await tester.pumpAndSettle();
+      await _openCart(tester);
+      expect(find.text('Could not load your saved cart.'), findsOneWidget);
+      expect(find.text('Your cart is empty'), findsNothing);
+
+      await tester.tap(find.text('Retry').hitTestable());
+      await tester.pumpAndSettle();
+      expect(find.text('No longer available'), findsOneWidget);
+      expect(find.text('Size XS · Quantity 3'), findsOneWidget);
+      expect(find.text('2 items'), findsOneWidget);
+      expect(find.text('₱1,798.00'), findsNWidgets(2));
+      final unavailableCard = find.ancestor(
+        of: find.text('No longer available'),
+        matching: find.byType(Card),
+      );
+      final remove = find.descendant(
+        of: unavailableCard,
+        matching: find.text('Remove'),
+      );
+      await tester.ensureVisible(remove);
+      await tester.pumpAndSettle();
+      await tester.tap(remove);
+      await tester.pumpAndSettle();
+      expect((await repository.read()).containsKey(missing), isFalse);
+      expect(find.text('₱1,798.00'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets(
+    'Catalog failure is reported separately from unavailable variants',
+    (tester) async {
+      final bundle = _CatalogBundle();
+      await tester.pumpWidget(_appWithBundle(bundle));
+      bundle.response.completeError(StateError('Missing catalog'));
+      await tester.pumpAndSettle();
+      await _openCart(tester);
+      expect(
+        find.text('Could not load the catalog for your cart.'),
+        findsOneWidget,
+      );
+      expect(find.text('No longer available'), findsNothing);
+      expect(find.text('Your cart is empty'), findsNothing);
+    },
+  );
+
   testWidgets('Catalog shows loading, then an empty message', (tester) async {
     final bundle = _CatalogBundle();
     await tester.pumpWidget(_appWithBundle(bundle));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(
+      find.byType(CircularProgressIndicator).hitTestable(),
+      findsOneWidget,
+    );
 
     bundle.response.complete('[]');
     await tester.pumpAndSettle();
@@ -331,16 +425,37 @@ void main() {
   });
 }
 
-Widget _appWithProducts(List<Product> products) {
+Future<void> _openCart(WidgetTester tester) async {
+  await tester.tap(
+    find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.text('Cart'),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Widget _appWithProducts(
+  List<Product> products, [
+  TestCartRepository? repository,
+]) {
   return ProviderScope(
-    overrides: [catalogProvider.overrideWith((ref) async => products)],
+    overrides: [
+      catalogProvider.overrideWith((ref) async => products),
+      cartRepositoryProvider.overrideWithValue(
+        repository ?? TestCartRepository(),
+      ),
+    ],
     child: const MainApp(),
   );
 }
 
 Widget _appWithBundle(AssetBundle bundle) {
   return ProviderScope(
-    overrides: [catalogProvider.overrideWith((ref) => loadProducts(bundle))],
+    overrides: [
+      catalogProvider.overrideWith((ref) => loadProducts(bundle)),
+      cartRepositoryProvider.overrideWithValue(TestCartRepository()),
+    ],
     child: const MainApp(),
   );
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/garment_preview.dart';
 import '../cart/cart_controller.dart';
+import '../cart/cart_issue.dart';
 import 'product.dart';
 import 'size_chart.dart';
 
@@ -19,19 +20,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _showBack = false;
   String? _selectedSize;
 
-  void _addToCart(ProductVariant variant) {
-    final added = ref
+  Future<void> _addToCart(ProductVariant variant) async {
+    final added = await ref
         .read(cartProvider.notifier)
         .add(widget.product.id, variant.size);
+    if (!mounted || !added) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(
-            added
-                ? 'Size ${variant.size} added to cart.'
-                : 'This size is unavailable.',
-          ),
+          content: Text('Size ${variant.size} added to cart.'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -40,6 +38,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    final cartState = ref.watch(cartProvider);
+    final canAdd = cartState.asData?.value.writeFailed == false;
     final selected = product.variantForSize(_selectedSize ?? '');
     final sizes = {
       ...sevnChartSizes,
@@ -127,10 +127,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   ),
                   const SizedBox(height: 12),
                   FilledButton(
-                    onPressed: selected == null
+                    onPressed: selected == null || !canAdd
                         ? null
                         : () => _addToCart(selected),
                     child: const Text('Add to cart'),
+                  ),
+                  CartIssue(
+                    cart: cartState,
+                    controller: ref.read(cartProvider.notifier),
                   ),
                   const SizedBox(height: 18),
                   const _ComingLater(

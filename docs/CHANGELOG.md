@@ -17,3 +17,7 @@ Added a size chart and availability checks, then connected product details to an
 ## 2026-11-28 — Cart layout redesign
 
 Added product thumbnails, compact quantity controls, and a pinned subtotal so shoppers can recognize and edit items while scrolling. The empty cart now uses an illustrated prompt to return to Shop. Formatting, analysis, and all 15 tests passed, including a long product name at 2× text on a 320 × 480 viewport. Inspected empty, one-item, and multi-item carts in Chrome at 390 × 844. Native targets were untested.
+
+## 2026-11-28 — Keep the cart after restart
+
+Saved variant quantities to SQLite so Cart survives restarts while prices continue to come from the catalog. Added retry for failed reads and writes, and kept unavailable lines removable. All 20 tests passed, including a real SQLite reopen test. Chrome restored one M and one L at ₱1,798.00 after a full browser restart with the same profile and origin. Android, iOS, and the Windows app were untested.
