@@ -9,7 +9,7 @@ class CartRepository {
   final Future<Database> Function() _open;
   Future<Database>? _opening;
 
-  Future<Database> _database() async {
+  Future<Database> database() async {
     final opening = _opening ??= _open();
     try {
       return await opening;
@@ -19,7 +19,7 @@ class CartRepository {
     }
   }
 
-  Future<CartRows> read() async => _read(await _database());
+  Future<CartRows> read() async => readCartRows(await database());
 
   Future<CartRows> add(CartKey key) => _write(
     (txn) => txn.execute(
@@ -52,20 +52,11 @@ class CartRepository {
   );
 
   Future<CartRows> _write(Future<void> Function(Transaction txn) change) async {
-    final db = await _database();
+    final db = await database();
     return db.transaction((txn) async {
       await change(txn);
-      return _read(txn);
+      return readCartRows(txn);
     });
-  }
-
-  Future<CartRows> _read(DatabaseExecutor db) async {
-    final rows = await db.query('cart_lines', orderBy: 'rowid');
-    return {
-      for (final row in rows)
-        (productId: row['product_id'] as String, size: row['size'] as String):
-            row['quantity'] as int,
-    };
   }
 
   Future<void> close() async {
@@ -80,4 +71,13 @@ class CartRepository {
     }
     await db.close();
   }
+}
+
+Future<CartRows> readCartRows(DatabaseExecutor db) async {
+  final rows = await db.query('cart_lines', orderBy: 'rowid');
+  return {
+    for (final row in rows)
+      (productId: row['product_id'] as String, size: row['size'] as String):
+          row['quantity'] as int,
+  };
 }

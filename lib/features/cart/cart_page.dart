@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format_price.dart';
 import '../../shared/widgets/garment_preview.dart';
+import '../checkout/checkout_page.dart';
 import 'cart_controller.dart';
 import 'cart_issue.dart';
 
@@ -95,7 +96,27 @@ class CartPage extends ConsumerWidget {
                 ),
         ),
         if (cart.lines.isNotEmpty)
-          _SubtotalStrip(subtotalCentavos: cart.subtotalCentavos),
+          _SubtotalStrip(
+            subtotalCentavos: cart.subtotalCentavos,
+            onCheckout: cart.canCheckout
+                ? () {
+                    if (controller.hasPendingEdits) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Wait for cart changes to finish.'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CheckoutPage(onContinueShopping: onBrowse),
+                      ),
+                    );
+                  }
+                : null,
+          ),
       ],
     );
   }
@@ -125,6 +146,7 @@ class _UnavailableLine extends StatelessWidget {
           Text(name, style: Theme.of(context).textTheme.titleMedium),
           Text('Size $size · Quantity $quantity'),
           const Text('No longer available'),
+          const Text('Remove this line to check out.'),
           TextButton(onPressed: onRemove, child: const Text('Remove')),
         ],
       ),
@@ -180,9 +202,13 @@ class _EmptyCart extends StatelessWidget {
 }
 
 class _SubtotalStrip extends StatelessWidget {
-  const _SubtotalStrip({required this.subtotalCentavos});
+  const _SubtotalStrip({
+    required this.subtotalCentavos,
+    required this.onCheckout,
+  });
 
   final int subtotalCentavos;
+  final VoidCallback? onCheckout;
 
   @override
   Widget build(BuildContext context) {
@@ -199,17 +225,27 @@ class _SubtotalStrip extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            child: OverflowBar(
-              alignment: MainAxisAlignment.spaceBetween,
-              spacing: 12,
-              overflowSpacing: 4,
-              overflowAlignment: OverflowBarAlignment.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Subtotal', style: theme.textTheme.titleMedium),
-                Text(
-                  formatPesos(subtotalCentavos),
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.titleLarge,
+                OverflowBar(
+                  alignment: MainAxisAlignment.spaceBetween,
+                  spacing: 12,
+                  overflowSpacing: 4,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  children: [
+                    Text('Subtotal', style: theme.textTheme.titleMedium),
+                    Text(
+                      formatPesos(subtotalCentavos),
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: onCheckout,
+                  child: const Text('Checkout'),
                 ),
               ],
             ),

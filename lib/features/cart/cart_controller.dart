@@ -17,7 +17,10 @@ class CartLine {
   final ProductVariant? variant;
   final int quantity;
 
-  int get totalCentavos => (variant?.priceCentavos ?? 0) * quantity;
+  int get totalCentavos => totalFor(variant?.priceCentavos ?? 0, quantity);
+
+  static int totalFor(int unitPriceCentavos, int quantity) =>
+      unitPriceCentavos * quantity;
 }
 
 class Cart {
@@ -25,6 +28,11 @@ class Cart {
 
   final Map<CartKey, CartLine> lines;
   final bool writeFailed;
+
+  bool get canCheckout =>
+      !writeFailed &&
+      lines.isNotEmpty &&
+      lines.values.every((line) => line.variant != null);
 
   int get itemCount => lines.values.fold(
     0,
@@ -56,6 +64,8 @@ class CartController extends AsyncNotifier<Cart> {
   final _edits = Queue<_CartEdit>();
   bool _writing = false;
   late Map<String, Product> _products;
+
+  bool get hasPendingEdits => _writing || _edits.isNotEmpty;
 
   @override
   Future<Cart> build() async {

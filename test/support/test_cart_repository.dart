@@ -1,6 +1,11 @@
 import 'package:fitlens/features/cart/cart_repository.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 
 class TestCartRepository implements CartRepository {
+  @override
+  Future<Database> database() =>
+      throw UnsupportedError('Test cart has no SQLite connection.');
+
   TestCartRepository([CartRows initial = const {}]) : _rows = Map.of(initial);
 
   final CartRows _rows;

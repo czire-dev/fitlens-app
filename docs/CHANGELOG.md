@@ -21,3 +21,11 @@ Added product thumbnails, compact quantity controls, and a pinned subtotal so sh
 ## 2026-11-28 — Keep the cart after restart
 
 Saved variant quantities to SQLite so Cart survives restarts while prices continue to come from the catalog. Added retry for failed reads and writes, and kept unavailable lines removable. All 20 tests passed, including a real SQLite reopen test. Chrome restored one M and one L at ₱1,798.00 after a full browser restart with the same profile and origin. Android, iOS, and the Windows app were untested.
+
+## 2026-11-28 — Checkout and save a demo order
+
+Added guest delivery details and review so shoppers can verify their cart before saving an order on this device. The SQLite migration preserves existing carts, and saving the reviewed snapshot and clearing Cart happen in one transaction. All 25 tests passed, including migration, rollback, and repeat submission. Chrome at 390 × 844 showed the confirmation reference and empty Cart after saving. Payment, fulfillment, and order history remain outside this batch. Native apps were untested.
+
+## 2026-11-28 — Polish checkout screens
+
+Grouped delivery fields and added offline city suggestions so shoppers can enter addresses faster. Review now shows product artwork and a clearer price breakdown. The receipt offers a copyable reference and a direct return to Shop. Formatting, analysis, and all 26 tests passed. Chrome showed the Caloocan suggestion, a wrapped address, and matching review and receipt totals. Saved-profile autofill and native apps were untested.

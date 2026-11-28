@@ -356,6 +356,8 @@ void main() {
       await tester.tap(find.text('Retry').hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('No longer available'), findsOneWidget);
+      final checkout = find.widgetWithText(FilledButton, 'Checkout');
+      expect(tester.widget<FilledButton>(checkout).onPressed, isNull);
       expect(find.text('Size XS · Quantity 3'), findsOneWidget);
       expect(find.text('2 items'), findsOneWidget);
       expect(find.text('₱1,798.00'), findsNWidgets(2));
@@ -372,6 +374,7 @@ void main() {
       await tester.tap(remove);
       await tester.pumpAndSettle();
       expect((await repository.read()).containsKey(missing), isFalse);
+      expect(tester.widget<FilledButton>(checkout).onPressed, isNotNull);
       expect(find.text('₱1,798.00'), findsNWidgets(2));
     },
   );
